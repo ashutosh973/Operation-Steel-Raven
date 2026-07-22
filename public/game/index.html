@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity Web Player | Operation Steel Raven</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=1600 height=900 tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-logo-title-footer"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">Operation Steel Raven</div>
+      </div>
+    </div>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var analyticsReady = false;
+      var queuedAnalyticsEvents = [];
+      var analyticsEventNames = {
+        mission_started: true,
+        mission_completed: true,
+        mission_failed: true
+      };
+
+      function postAnalyticsMessage(eventName, missionId, outcome) {
+        var message = {
+          source: "operation-steel-raven-game",
+          type: "analytics",
+          version: 1,
+          event: eventName,
+          mission_id: missionId || "mission-01"
+        };
+        if (outcome === "success" || outcome === "failure") message.outcome = outcome;
+        window.parent.postMessage(message, window.location.origin);
+      }
+
+      window.steelRavenReportAnalytics = function(eventName, missionId, outcome) {
+        if (!analyticsEventNames[eventName]) return;
+        var event = [eventName, missionId || "mission-01", outcome || ""];
+        if (!analyticsReady) {
+          queuedAnalyticsEvents.push(event);
+          return;
+        }
+        postAnalyticsMessage(event[0], event[1], event[2]);
+      };
+
+      function reportUnityLoaded() {
+        postAnalyticsMessage("unity_loaded", "mission-01", "");
+        analyticsReady = true;
+        queuedAnalyticsEvents.splice(0).forEach(function(event) {
+          postAnalyticsMessage(event[0], event[1], event[2]);
+        });
+      }
+
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        var warningBanner = document.querySelector("#unity-warning");
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/5ecb3151317031d4998ff8c537b4352e.loader.js";
+      var dataPartUrls = [
+        buildUrl + "/381139147a1ab802cf83d437ea027eff.data.unityweb.part-00",
+        buildUrl + "/381139147a1ab802cf83d437ea027eff.data.unityweb.part-01",
+        buildUrl + "/381139147a1ab802cf83d437ea027eff.data.unityweb.part-02",
+        buildUrl + "/381139147a1ab802cf83d437ea027eff.data.unityweb.part-03",
+        buildUrl + "/381139147a1ab802cf83d437ea027eff.data.unityweb.part-04"
+      ];
+      var config = {
+        arguments: [],
+        dataUrl: "",
+        frameworkUrl: buildUrl + "/216214105776023abe56db423f5196ed.framework.js.unityweb",
+        codeUrl: buildUrl + "/6228de18dbff02970de5f9ada1ea5642.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "Steel Raven Interactive",
+        productName: "Operation Steel Raven",
+        productVersion: "0.9.0",
+        showBanner: unityShowBanner,
+        // errorHandler: function(err, url, line) {
+        //    alert("error " + err + " occurred at line " + line);
+        //    // Return 'true' if you handled this error and don't want Unity
+        //    // to process it further, 'false' otherwise.
+        //    return true;
+        // },
+      };
+
+      // By default, Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
+
+      // If you would like all file writes inside Unity Application.persistentDataPath
+      // directory to automatically persist so that the contents are remembered when
+      // the user revisits the site the next time, uncomment the following line:
+      // config.autoSyncPersistentDataPath = true;
+      // This autosyncing is currently not the default behavior to avoid regressing
+      // existing user projects that might rely on the earlier manual
+      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
+      // expected to change.
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        document.querySelector("#unity-container").className = "unity-mobile";
+        canvas.className = "unity-mobile";
+
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
+
+
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+        canvas.style.width = "1600px";
+        canvas.style.height = "900px";
+      }
+
+      document.querySelector("#unity-loading-bar").style.display = "block";
+
+      function assembleUnityData() {
+        var completedParts = 0;
+        var progressBar = document.querySelector("#unity-progress-bar-full");
+
+        return Promise.all(dataPartUrls.map(function(url) {
+          return fetch(url).then(function(response) {
+            if (!response.ok) {
+              throw new Error("Mission package download failed (" + response.status + ")");
+            }
+            return response.arrayBuffer();
+          }).then(function(part) {
+            completedParts += 1;
+            progressBar.style.width = (60 * completedParts / dataPartUrls.length) + "%";
+            return part;
+          });
+        })).then(function(parts) {
+          return URL.createObjectURL(new Blob(parts, { type: "application/octet-stream" }));
+        });
+      }
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        var assembledDataUrl;
+        assembleUnityData()
+          .then((dataUrl) => {
+            assembledDataUrl = dataUrl;
+            config.dataUrl = dataUrl;
+            return createUnityInstance(canvas, config, (progress) => {
+              document.querySelector("#unity-progress-bar-full").style.width = (60 + 40 * progress) + "%";
+            });
+          })
+          .then((unityInstance) => {
+            if (assembledDataUrl) URL.revokeObjectURL(assembledDataUrl);
+            document.querySelector("#unity-loading-bar").style.display = "none";
+            reportUnityLoaded();
+            document.querySelector("#unity-fullscreen-button").onclick = () => {
+              unityInstance.SetFullscreen(1);
+            };
+          })
+          .catch((message) => {
+            if (assembledDataUrl) URL.revokeObjectURL(assembledDataUrl);
+            unityShowBanner(String(message), "error");
+          });
+      };
+
+      document.body.appendChild(script);
+
+    </script>
+  </body>
+</html>

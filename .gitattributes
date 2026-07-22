@@ -1,0 +1,3 @@
+public/game/Build/*.unityweb* binary
+public/game/Build/*.js -diff linguist-vendored
+public/game/TemplateData/** linguist-vendored

@@ -1,0 +1,11 @@
+{
+  "version": "0.9.3-web-mission-1",
+  "release": "anonymous-play-funnel",
+  "mission": "border-crossing",
+  "title": "Operation Steel Raven — Mission 1",
+  "engine": "Unity 6000.5.4f1",
+  "platform": "webgl",
+  "entry": "./index.html",
+  "dataParts": 5,
+  "builtAt": "2026-07-22"
+}
